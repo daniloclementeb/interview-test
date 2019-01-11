@@ -1,10 +1,6 @@
 package com.danilo.gympass.interviewtest.model;
 
 import java.util.ArrayList;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import net.bytebuddy.asm.Advice.This;
 
 public class LinhaTemplate {
 	private String hora;

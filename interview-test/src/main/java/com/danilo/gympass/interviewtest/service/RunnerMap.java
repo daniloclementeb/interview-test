@@ -28,7 +28,8 @@ public interface RunnerMap {
 	/**
 	 * preenche as posicoes de cada corredor
 	 * @param resposta
+	 * @return 
 	 * @throws ParseException
 	 */
-	void preenchePosicao(Resposta resposta) throws ParseException;
+	Resposta preenchePosicao(Resposta resposta) throws ParseException;
 }

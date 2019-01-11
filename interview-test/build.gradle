@@ -23,8 +23,12 @@ repositories {
 	mavenCentral()
 }
 
-
+bootJar {
+	mainClassName = 'com.danilo.gympass.interviewtest.InterviewTestApplication'
+}
 dependencies {
 	implementation('org.springframework.boot:spring-boot-starter-web')
 	testImplementation('org.springframework.boot:spring-boot-starter-test')
+	testImplementation('org.mockito:mockito-core')
+	
 }

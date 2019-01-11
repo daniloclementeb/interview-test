@@ -28,18 +28,20 @@ public class RunnerMapImpl implements RunnerMap{
 	public HashMap<String, InfoPiloto> geraMapaCorredor(List<LinhaTemplate> linha) {
 		
 		HashMap<String, InfoPiloto> mapa = new HashMap<String, InfoPiloto>();
-		for (LinhaTemplate t: linha) {
-			Volta v = Volta.linhaToVolta(t);
-			
-			if (mapa.containsKey(t.getIdPiloto())) {
-				mapa.get(t.getIdPiloto()).getVoltas().add(v);
-			} else {
-				ArrayList<Volta> list = new ArrayList<Volta>();
-				list.add(v);
-				InfoPiloto info = new InfoPiloto();
-				info.setNome(t.getNomePiloto());
-				info.setVoltas(list);
-				mapa.put(t.getIdPiloto(), info);
+		if (linha != null) {
+			for (LinhaTemplate t: linha) {
+				Volta v = Volta.linhaToVolta(t);
+				
+				if (mapa.containsKey(t.getIdPiloto())) {
+					mapa.get(t.getIdPiloto()).getVoltas().add(v);
+				} else {
+					ArrayList<Volta> list = new ArrayList<Volta>();
+					list.add(v);
+					InfoPiloto info = new InfoPiloto();
+					info.setNome(t.getNomePiloto());
+					info.setVoltas(list);
+					mapa.put(t.getIdPiloto(), info);
+				}
 			}
 		}
 		return mapa;
@@ -48,13 +50,15 @@ public class RunnerMapImpl implements RunnerMap{
 	@Override
 	public List<DadosPiloto> geraRespostaParcial(HashMap<String, InfoPiloto> mapa) throws ParseException {
 		ArrayList<DadosPiloto> list = new ArrayList<DadosPiloto>();
-		Iterator<Entry<String, InfoPiloto>> iterator = mapa.entrySet().iterator();
-		while(iterator.hasNext()) {
-			Entry<String, InfoPiloto> el = iterator.next();
-			DadosPiloto r = populaResposta(el);
-			list.add(r);
+		if (mapa != null) {
+			Iterator<Entry<String, InfoPiloto>> iterator = mapa.entrySet().iterator();
+			while(iterator.hasNext()) {
+				Entry<String, InfoPiloto> el = iterator.next();
+				DadosPiloto r = populaResposta(el);
+				list.add(r);
+			}
+			list.sort(new DadosPilotoComparator());
 		}
-		list.sort(new DadosPilotoComparator());
 		return list;
 	}
 
@@ -62,7 +66,11 @@ public class RunnerMapImpl implements RunnerMap{
 		DadosPiloto r = new DadosPiloto();
 		r.setCodigoPiloto(el.getKey());
 		r.setNomePiloto(el.getValue().getNome());
-		r.setQtdVolta(el.getValue().getVoltas().size());
+		if (el.getValue().getVoltas() == null) {
+			r.setQtdVolta(0);
+		} else {
+			r.setQtdVolta(el.getValue().getVoltas().size());
+		}
 		r.setTempoTotal(calculaTempoTotal(el.getValue()));
 		r.setTempo(el.getValue().getTempoTotal());
 		r.setMelhorVolta(el.getValue().getMelhorVolta());
@@ -74,50 +82,67 @@ public class RunnerMapImpl implements RunnerMap{
 	private String calculaTempoTotal(InfoPiloto infoPiloto) throws ParseException {
 		long total = 0;
 		double velocidadeTotal = 0;
-		for (Volta v:infoPiloto.getVoltas()) {
-			long tempo = helper.stringDateToLong(v.getTempo());
-			total += tempo;
-			if (infoPiloto.getMelhorTempo() == null) {
-				infoPiloto.setMelhorTempo(helper.longDateToString(tempo));
-				infoPiloto.setMelhorVolta(v.getnVolta());
-			} else if (helper.stringDateToLong(infoPiloto.getMelhorTempo()) > tempo) {
-				infoPiloto.setMelhorTempo(helper.longDateToString(tempo));
-				infoPiloto.setMelhorVolta(v.getnVolta());
+		if (infoPiloto.getVoltas() != null) {
+			for (Volta v:infoPiloto.getVoltas()) {
+				long tempo = helper.stringDateToLong(v.getTempo());
+				total += tempo;
+				if (infoPiloto.getMelhorTempo() == null) {
+					infoPiloto.setMelhorTempo(helper.longDateToString(tempo));
+					infoPiloto.setMelhorVolta(v.getnVolta());
+				} else if (helper.stringDateToLong(infoPiloto.getMelhorTempo()) > tempo) {
+					infoPiloto.setMelhorTempo(helper.longDateToString(tempo));
+					infoPiloto.setMelhorVolta(v.getnVolta());
+				}
+				velocidadeTotal += Double.parseDouble(v.getVelocidade());
 			}
-			velocidadeTotal += Double.parseDouble(v.getVelocidade());
+			infoPiloto.setVelocidadeMedia(velocidadeTotal/infoPiloto.getVoltas().size());
 		}
-		infoPiloto.setVelocidadeMedia(velocidadeTotal/infoPiloto.getVoltas().size());
 		infoPiloto.setTempoTotal(total);
 		return helper.longDateToString(total);
 	}
 
 	@Override
-	public void preenchePosicao(Resposta resposta) throws ParseException {
+	public Resposta preenchePosicao(Resposta resposta) throws ParseException {
 		// Com a lista ordenada, posso preencher o campo posicao de forma natural
-		int pos = 1;
-		String tempoPrimeiro = null;
-		ArrayList<DadosPiloto> list = (ArrayList<DadosPiloto>) resposta.getDadosCorrida();
-		for (DadosPiloto el:list) {
-			if (pos == 1) {
-				//tempoTotal base para calculo
-				el.setDiferencaParaOPrimeiro("N/A");
-				tempoPrimeiro = el.getTempoTotal();
-			} else {
-				//calculo a diferenca
-				el.setDiferencaParaOPrimeiro(helper.calculaDiferencaTempo(tempoPrimeiro, el.getTempoTotal()));
+		if (resposta != null) {
+			int pos = 1;
+			String tempoPrimeiro = null;
+			ArrayList<DadosPiloto> list = (ArrayList<DadosPiloto>) resposta.getDadosCorrida();
+			for (DadosPiloto el:list) {
+				tempoPrimeiro = setaDiferencaParaPrimeiro(pos, tempoPrimeiro, el);
+				el.setPosicaoChegada(pos++);
+				setaMelhorVolta(resposta, el);
 			}
-			el.setPosicaoChegada(pos++);
-			
-			if (resposta.getMelhorVoltaCorrida() == null) {
+		}
+		return resposta;
+	}
+
+	private String setaDiferencaParaPrimeiro(int pos, String tempoPrimeiro, DadosPiloto el) throws ParseException {
+		if (pos == 1) {
+			//tempoTotal base para calculo
+			el.setDiferencaParaOPrimeiro("N/A");
+			tempoPrimeiro = el.getTempoTotal();
+		} else {
+			//calculo a diferenca
+			el.setDiferencaParaOPrimeiro(helper.calculaDiferencaTempo(tempoPrimeiro, el.getTempoTotal()));
+		}
+		return tempoPrimeiro;
+	}
+
+	private void setaMelhorVolta(Resposta resposta, DadosPiloto el) throws ParseException {
+		if (resposta.getMelhorVoltaCorrida() == null) {
+			resposta.setMelhorVoltaCorrida(el.getMelhorTempo());
+		} else {
+			long tempo = helper.stringDateToLong(el.getMelhorTempo());
+			if (tempo < helper.stringDateToLong(resposta.getMelhorVoltaCorrida())) {
 				resposta.setMelhorVoltaCorrida(el.getMelhorTempo());
-			} else {
-				long tempo = helper.stringDateToLong(el.getMelhorTempo());
-				if (tempo < helper.stringDateToLong(resposta.getMelhorVoltaCorrida())) {
-					resposta.setMelhorVoltaCorrida(el.getMelhorTempo());
-				}
-			
 			}
+		
 		}
 	}
 
+	public void setHelper(DateHelper helper) {
+		this.helper = helper;
+	}
+	
 }
