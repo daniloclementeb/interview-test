@@ -33,7 +33,11 @@ public class RunnerMapImpl implements RunnerMap{
 				Volta v = Volta.linhaToVolta(t);
 				
 				if (mapa.containsKey(t.getIdPiloto())) {
-					mapa.get(t.getIdPiloto()).getVoltas().add(v);
+					if (mapa.get(t.getIdPiloto()).getVoltas().size() < 4) {
+						mapa.get(t.getIdPiloto()).getVoltas().add(v);						
+					} else {
+						System.out.println("size maior que 4");
+					}
 				} else {
 					ArrayList<Volta> list = new ArrayList<Volta>();
 					list.add(v);
